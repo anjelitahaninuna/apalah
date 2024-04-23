@@ -27,3 +27,160 @@ public class Apps extends Application {
         launch();
     }
 }
+
+
+
+//////////////////////////////////////////////
+package org.example.week10;
+
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+
+import java.sql.*;
+import java.util.ArrayList;
+
+public class NewWindowController {
+
+    @FXML private TextField txtFldJudul;
+    @FXML private TextArea txtAreaKonten;
+    @FXML private Button btnSimpan;
+    @FXML private Button btnHapus;
+    @FXML private TableView<Catatan> table;
+    @FXML private TableColumn<Catatan, Integer> id;
+    @FXML private TableColumn<Catatan, String> judul;
+
+    public Catatan c;
+
+    private ObservableList<Catatan> notelist = FXCollections.observableArrayList();
+
+    public void onBtnSimpanClick(ActionEvent event) throws SQLException, ClassNotFoundException{
+        String url = "jdbc:sqlite:catatan.sqlite";
+        Connection conn = DriverManager.getConnection(url);;
+        String query = "insert into catatan(judul, isi) values(?,?)";
+        PreparedStatement ps = conn.prepareStatement(query);
+        String judul = txtFldJudul.getText();
+        String isi = txtFldJudul.getText();
+        ps.setString(1,judul);
+        ps.setString(2, isi);
+        int hasil = ps.executeUpdate();
+        if(hasil==1){
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Catatan Ditambahkan!");
+            alert.show();
+        }
+        bersihkan();
+        showdata();
+    }
+
+    public void onBtnHapus(ActionEvent event) throws SQLException, ClassNotFoundException {
+        int id;
+        ObservableList<Catatan> pilih = table.getSelectionModel().getSelectedItems();
+        id =pilih.get(0).getId();
+
+        String url = "jdbc:sqlite:catatan.sqlite";
+        Connection conn = DriverManager.getConnection(url);;
+        String query = "delete from catatan where id = ?";
+        PreparedStatement ps = conn.prepareStatement(query);
+        ps.setInt(1, id);
+        int hasil = ps.executeUpdate();
+        if(hasil==1){
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Data berhasil dihapus.!");
+            alert.show();
+        }
+        showdata();
+        bersihkan();
+    }
+
+
+
+    public void showdata() throws SQLException, ClassNotFoundException {
+        table.setEditable(false);
+        id.setCellValueFactory(new PropertyValueFactory<Catatan,Integer>("id"));
+        judul.setCellValueFactory(new PropertyValueFactory<Catatan,String>("Judul"));
+        table.setItems(getDataFromTable());
+        table.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Catatan>() {
+            @Override
+            public void changed(ObservableValue<? extends Catatan> observableValue, Catatan catatan, Catatan t1) {
+                if(observableValue.getValue() != null){
+                    txtFldJudul.setText(observableValue.getValue().getJudul());
+                    txtAreaKonten.setText(observableValue.getValue().getKonten());
+                    c = new Catatan(observableValue.getValue().getId(),observableValue.getValue().getJudul(), observableValue.getValue().getKonten());
+                }
+            }
+        });
+    }
+//    @FXML
+//    private void initialize(){
+//        id.setCellValueFactory(new PropertyValueFactory<>("id"));
+//        judul.setCellValueFactory(new PropertyValueFactory<>("judul"));
+//        try {
+//            Connection conn = DriverManager.getConnection("jdbc:sqlite:catatan.sqlite");
+//            Statement statement = conn.createStatement();
+//            Statement.execute("CREATE TABLE IF NOT EXISTS catatan(" +
+//                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+//                    "judul TEXT," +
+//                    "isi TEXT)");
+//
+//        }catch (SQLException e) {
+//            e.printStackTrace();
+//        }
+//
+//        }
+
+    private void bersihkan(){
+        txtFldJudul.clear();
+        txtAreaKonten.clear();
+        txtFldJudul.requestFocus();
+    }
+
+    private ObservableList<Catatan> getDataFromTable() throws
+            ClassNotFoundException, SQLException {
+        Connection conn;
+        ResultSet rs;
+        String connectionString = "jdbc:sqlite:catatan.sqlite";
+        String select = "SELECT * FROM catatan";
+        conn = DriverManager.getConnection(connectionString);
+        PreparedStatement preparedStatement = conn.prepareStatement(select);
+        rs = preparedStatement.executeQuery();
+        ObservableList<Catatan> noted =
+                FXCollections.observableArrayList(dataBaseArrayList(rs));
+        return noted;
+    }
+
+    private ArrayList dataBaseArrayList(ResultSet rs) throws SQLException {
+        ArrayList<Catatan> data = new ArrayList<>();
+        while (rs.next()) {
+            Catatan c = new
+                    Catatan(rs.getInt("id"),rs.getString("judul"),rs.getString("isi"));
+            data.add(c);
+        }
+        return data;
+    }
+
+    public void onBtnEditClick(ActionEvent event) throws SQLException, ClassNotFoundException {
+
+        if(c!=null){
+            String url = "jdbc:sqlite:catatan.sqlite";
+            Connection conn = DriverManager.getConnection(url);;
+            String query = "update catatan set judul = ?, isi = ? where id = ?";
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, txtFldJudul.getText());
+            ps.setString(2, txtAreaKonten.getText());
+            ps.setInt(3, c.getId());
+            int hasil = ps.executeUpdate();
+            if(hasil ==1){
+                Alert alert = new Alert(Alert.AlertType.INFORMATION, "Catatan Dirubah!");
+                alert.show();
+            }
+            showdata();
+            bersihkan();
+            c = null ;
+        }
+    }
+}
+
