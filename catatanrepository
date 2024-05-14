@@ -1,0 +1,140 @@
+package org.week12.repository;
+
+import org.week12.data.Catatan;
+import org.week12.util.DatabaseDriver;
+
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class CatatanRepository implements Dao<Catatan, Integer> {
+    private DatabaseDriver driver;
+
+    public CatatanRepository(DatabaseDriver driver) {
+        this.driver = driver;
+    }
+
+
+    @Override
+    public Catatan findById(Integer id) {
+        return null;
+    }
+
+    @Override
+    public List<Catatan> findAll() {
+        return null;
+    }
+
+    @Override
+    public List<Catatan> getAll() {
+        List<Catatan> catatanList = new ArrayList<>();
+        String query = "SELECT * FROM catatan";
+        Connection connection = driver.getConnection();
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            ResultSet resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                Integer id = resultSet.getInt("id");
+                String judul = resultSet.getString("judul");
+                String konten = resultSet.getString("konten");
+                String kategori = resultSet.getString("kategori");
+                Catatan course = new Catatan(id, judul, konten, kategori);
+                catatanList.add(course);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            // Handle database query error
+        }
+        return catatanList;
+    }
+
+    @Override
+    public boolean save(Catatan catatan) {
+        String query = "INSERT INTO catatan ( judul, konten, kategori) VALUES (?, ?,?)";
+        Connection connection = driver.getConnection();
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, catatan.getJudul());
+            preparedStatement.setString(2, catatan.getKonten());
+            preparedStatement.setString(3, catatan.getKategori());
+            int rowsAffected = preparedStatement.executeUpdate();
+            if (rowsAffected > 0) {
+                return true;
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            // Handle database query error
+        }
+        return false;
+    }
+
+    @Override
+    public boolean update(Catatan oldData, Catatan newData) {
+        String query = "UPDATE catatan set judul=?, konten=?, kategori=? WHERE id=?";
+        Connection connection = driver.getConnection();
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, newData.getJudul());
+            preparedStatement.setString(2, newData.getKonten());
+            preparedStatement.setString(3, newData.getKategori());
+            preparedStatement.setInt(4, newData.getId());
+            int rowsAffected = preparedStatement.executeUpdate();
+            if (rowsAffected > 0) {
+                return true;
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return false;
+    }
+
+    @Override
+    public boolean delete(Catatan catatan) {
+        String query = "DELETE FROM catatan WHERE id= ?";
+        Connection connection = driver.getConnection();
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setInt(1, catatan.getId());
+            int rowsAffected = preparedStatement.executeUpdate();
+            if (rowsAffected > 0) {
+                return true;
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return false;
+    }
+
+    public List<MarkandJumlah> getJumlahByMark() {
+        Connection connection = driver.getConnection();
+        List<MarkandJumlah> markAndJumlahList = new ArrayList<>();
+        String query = "SELECT CASE\n" +
+                "    WHEN catatan.nilai >= 0 AND catatan.nilai<=20 THEN 'E'\n" +
+                "    WHEN catatan.nilai >= 21 AND catatan.nilai<=40 THEN 'D'\n" +
+                "    WHEN catatan.nilai >= 41 AND catatan.nilai<=60 THEN 'C'\n" +
+                "    WHEN catatan.nilai >= 61 AND catatan.nilai<=80 THEN 'B'\n" +
+                "    WHEN catatan.nilai >= 81 AND catatan.nilai<=100 THEN 'A'\n" +
+                "    END AS mark,\n" +
+                "    COUNT(*) AS jumlah FROM catatan\n" +
+                "    GROUP BY\n" +
+                "        CASE\n" +
+                "            WHEN catatan.nilai >= 0 AND catatan.nilai<=20 THEN 'E'\n" +
+                "            WHEN catatan.nilai >= 21 AND catatan.nilai<=40 THEN 'D'\n" +
+                "            WHEN catatan.nilai >= 41 AND catatan.nilai<=60 THEN 'C'\n" +
+                "            WHEN catatan.nilai >= 61 AND catatan.nilai<=80 THEN 'B'\n" +
+                "            WHEN catatan.nilai >= 81 AND catatan.nilai<=100 THEN 'A'\n" +
+                "        END;";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            ResultSet resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                String mark = resultSet.getString("mark");
+                int jumlah = resultSet.getInt("jumlah");
+                markAndJumlahList.add(new MarkandJumlah(mark, jumlah));
+            }
+        } catch (SQLException e) {
+            // Handle database query error
+            e.printStackTrace();
+        }
+        return markAndJumlahList;
+    }
+}
